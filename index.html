@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Сервис WEISAN — приборная панель</title>
+<style>
+:root{
+  --paper:#EDEFEE; --card:#FFFFFF; --line:#D3D8D6; --line2:#E4E8E6;
+  --ink:#0F1417; --body:#39454A; --mute:#6B7A80;
+  --accent:#C8792A; --accent-soft:rgba(200,121,42,.13);
+  --good:#2E7A58; --warn:#B8860B; --crit:#B3352B;
+  --good-bg:rgba(46,122,88,.11); --warn-bg:rgba(184,134,11,.13); --crit-bg:rgba(179,53,43,.11);
+  --grid:#DFE4E2;
+  --mono:ui-monospace,"SF Mono","Cascadia Mono","Consolas","Liberation Mono",monospace;
+  --sans:"Segoe UI Variable Display","Segoe UI",-apple-system,BlinkMacSystemFont,Roboto,"Helvetica Neue",sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --paper:#0F1417; --card:#151C20; --line:#263238; --line2:#1E272C;
+    --ink:#EAEFEC; --body:#B4C0C4; --mute:#7C8C93;
+    --accent:#E09A4F; --accent-soft:rgba(224,154,79,.14);
+    --good:#4FBE8C; --warn:#E0B44A; --crit:#E8695C;
+    --good-bg:rgba(79,190,140,.13); --warn-bg:rgba(224,180,74,.13); --crit-bg:rgba(232,105,92,.13);
+    --grid:#243036;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0F1417; --card:#151C20; --line:#263238; --line2:#1E272C;
+  --ink:#EAEFEC; --body:#B4C0C4; --mute:#7C8C93;
+  --accent:#E09A4F; --accent-soft:rgba(224,154,79,.14);
+  --good:#4FBE8C; --warn:#E0B44A; --crit:#E8695C;
+  --good-bg:rgba(79,190,140,.13); --warn-bg:rgba(224,180,74,.13); --crit-bg:rgba(232,105,92,.13);
+  --grid:#243036;
+}
+:root[data-theme="light"]{
+  --paper:#EDEFEE; --card:#FFFFFF; --line:#D3D8D6; --line2:#E4E8E6;
+  --ink:#0F1417; --body:#39454A; --mute:#6B7A80;
+  --accent:#C8792A; --accent-soft:rgba(200,121,42,.13);
+  --good:#2E7A58; --warn:#B8860B; --crit:#B3352B;
+  --good-bg:rgba(46,122,88,.11); --warn-bg:rgba(184,134,11,.13); --crit-bg:rgba(179,53,43,.11);
+  --grid:#DFE4E2;
+}
+*{box-sizing:border-box}
+html,body{overflow-x:hidden}
+body{margin:0;background:var(--paper);color:var(--body);font-family:var(--sans);font-size:15px;line-height:1.5}
+.wrap{max-width:1180px;margin:0 auto;padding:26px 20px 72px}
+
+header{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;justify-content:space-between;
+  padding-bottom:18px;border-bottom:2px solid var(--ink)}
+.brand{font-family:var(--mono);font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--accent)}
+h1{margin:6px 0 4px;font-size:27px;line-height:1.1;color:var(--ink);font-weight:640;letter-spacing:-.02em;text-wrap:balance}
+.sub{font-size:13px;color:var(--mute)}
+.stamp{font-family:var(--mono);font-size:11px;color:var(--mute);text-align:right;line-height:1.7}
+button.theme{font:inherit;font-size:12px;padding:5px 11px;border:1px solid var(--line);background:var(--card);
+  color:var(--body);border-radius:2px;cursor:pointer}
+button.theme:hover{border-color:var(--accent);color:var(--accent)}
+button.theme:focus-visible,.tab:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.rail{display:grid;grid-template-columns:repeat(auto-fit,minmax(178px,1fr));gap:10px;margin:20px 0 6px}
+.kpi{background:var(--card);border:1px solid var(--line2);border-left:3px solid var(--mute);border-radius:2px;padding:11px 13px}
+.kpi.is-good{border-left-color:var(--good)} .kpi.is-warn{border-left-color:var(--warn)} .kpi.is-crit{border-left-color:var(--crit)}
+.kpi .k{font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--mute);line-height:1.35;min-height:28px}
+.kpi .v{font-family:var(--mono);font-size:25px;font-weight:600;color:var(--ink);letter-spacing:-.02em;
+  font-variant-numeric:tabular-nums;margin:3px 0 2px}
+.kpi .v small{font-size:13px;color:var(--mute);font-weight:400}
+.kpi .row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:2px}
+.chip{font-family:var(--mono);font-size:11px;font-weight:600;padding:1px 6px;border-radius:2px;white-space:nowrap}
+.chip.good{background:var(--good-bg);color:var(--good)} .chip.crit{background:var(--crit-bg);color:var(--crit)}
+.chip.warn{background:var(--warn-bg);color:var(--warn)} .chip.flat{background:var(--line2);color:var(--mute)}
+
+nav.tabs{display:flex;flex-wrap:wrap;gap:2px;margin:22px 0 0;border-bottom:1px solid var(--line)}
+.tab{font:inherit;font-size:13.5px;padding:9px 14px;border:0;background:transparent;color:var(--mute);
+  cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tab:hover{color:var(--ink)}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent);font-weight:600}
+section[role="tabpanel"]{padding-top:22px}
+section[hidden]{display:none}
+
+.panel{background:var(--card);border:1px solid var(--line2);border-radius:2px;padding:16px 18px;margin:0 0 14px}
+.panel h2{margin:0 0 3px;font-size:17px;line-height:1.28;color:var(--ink);font-weight:620;letter-spacing:-.01em;text-wrap:balance}
+.panel .cap{font-size:12px;color:var(--mute);margin:0 0 14px;font-family:var(--mono)}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px}
+
+.scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:520px}
+th{text-align:left;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);
+  font-weight:600;padding:7px 9px;border-bottom:1px solid var(--line)}
+td{padding:7px 9px;border-bottom:1px solid var(--line2);color:var(--body)}
+td.n,th.n{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+tbody tr:last-child td{border-bottom:0}
+td.name{color:var(--ink)}
+.bar{height:7px;background:var(--accent);border-radius:1px;display:inline-block;vertical-align:middle}
+.bar.dim{background:var(--mute);opacity:.42}
+
+.take{border-left:3px solid var(--accent);background:var(--accent-soft);padding:11px 14px;margin:14px 0 0;
+  font-size:13.5px;border-radius:0 2px 2px 0;color:var(--body)}
+.take b{color:var(--ink)}
+.take.crit{border-left-color:var(--crit);background:var(--crit-bg)}
+.take.good{border-left-color:var(--good);background:var(--good-bg)}
+
+.refl h3{font-size:15px;color:var(--ink);margin:22px 0 6px;font-weight:620}
+.refl p{margin:0 0 10px}
+.refl ul{margin:0 0 10px;padding-left:19px}
+.refl li{margin:5px 0}
+.tagk{font-family:var(--mono);font-size:10.5px;padding:1px 5px;border-radius:2px;background:var(--good-bg);color:var(--good)}
+.tagp{font-family:var(--mono);font-size:10.5px;padding:1px 5px;border-radius:2px;background:var(--warn-bg);color:var(--warn)}
+
+footer{margin-top:34px;padding-top:16px;border-top:1px solid var(--line);font-size:11.5px;color:var(--mute);font-family:var(--mono);line-height:1.75}
+svg{display:block;max-width:100%}
+@media (prefers-reduced-motion:no-preference){.tab,.kpi{transition:border-color .15s,color .15s}}
+@media print{body{background:#fff}.tab{display:none}section[hidden]{display:block!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div>
+    <div class="brand">WEISAN · Сервис и клиентский опыт</div>
+    <h1>Приборная панель сервиса</h1>
+    <div class="sub">Февраль — июль 2026. Шесть месяцев, помесячно.</div>
+  </div>
+  <div style="display:flex;gap:14px;align-items:flex-end">
+    <div class="stamp">снимок 03.08.2026<br>amoCRM 7777146<br>+ таблица клиентского опыта</div>
+    <button class="theme" id="themeBtn" type="button">Тема</button>
+  </div>
+</header>
+
+<div class="rail" id="rail"></div>
+
+<nav class="tabs" role="tablist" id="tabs"></nav>
+<div id="panels"></div>
+
+<footer>
+  Источники: amoCRM, воронка «Сервисное обслуживание» (id 7777146) — поток, статусы, сроки, результат решения, компенсации, причины обращений.<br>
+  Таблица «Менеджер клиентского опыта WEISAN», лист «Основной отчет» — апсейл, прозвон, инсайты, отзывы, предложения; лист «Возвраты» — возвраты.<br>
+  Сроки решения посчитаны по датам создания и закрытия сделок. Блок «Ждёт запчасть» — накопленный остаток на дату снимка, не помесячно.<br>
+  Данные обновляются вручную: попросите пересобрать панель, когда закроется месяц.
+</footer>
+</div>
+
+<script>
+const M = ["Фев","Мар","Апр","Май","Июн","Июл"];
+const D = {
+  created:[137,110,84,123,115,133], sniseng:[0,0,0,2,4,12],
+  closed:[165,121,79,115,92,105], solved:[140,93,70,109,84,93], unsolved:[25,28,9,6,8,12],
+  shareSolved:[84.8,76.9,88.6,94.8,91.3,88.6],
+  avgD:[15.2,10.4,7.9,11.1,7.1,10.1], medD:[6.8,4.0,1.9,0.9,2.8,3.2], p90D:[39.1,25.2,22.1,35.4,15.9,21.7],
+  positive:[108,74,72,109,100,108], neutral:[4,5,3,1,3,3], negative:[0,0,0,0,0,0],
+  empty:[25,27,9,11,12,22], fillRate:[81.8,75.5,89.3,91.1,89.6,83.5],
+  compN:[5,2,6,8,9,2], compSum:[34809,2409,46041,22242,38440,4490],
+  upN:[14,11,17,20,15,17], upCash:[310000,93700,142695,95350,186020,157750],
+  upAvg:[22143,8518,8394,4768,12401,9279],
+  returns:[3,5,3,3,0,3],
+  callFact:[177,36,302,393,251,200], callPlan:[634,741,1054,500,342,404], callPct:[27.9,4.9,28.7,78.6,73.4,49.5],
+  insights:[4,4,5,10,5,8], reviews:[16,9,16,29,14,11], proposals:[5,4,5,4,3,2], initiatives:[0,0,0,0,0,0],
+  comments:[0,0,0,1,1,61], nps:[0,0,0,0,0,0], csat:[0,0,0,0,0,0]
+};
+const REASONS = [["Электроника: плата, потенциометр, ЭГ, двигатель",16,"crit"],
+ ["Консультация: как работать, настройка, резьба",11,"warn"],
+ ["Механика: шестерни, ремни, подшипники, гайки",10,"crit"],
+ ["Заказ запчасти",9,"mute"],["Масло, СОЖ, расходники",4,"mute"],
+ ["Гарантия — вопрос или спор",4,"warn"],["Комплектация: прислали не то",3,"warn"],
+ ["Геометрия, люфты, вибрация",2,"crit"],["Доставка и повреждения",1,"warn"]];
+const WAIT = [252,192,182,81,77,69,64,55,49,48,39,22,20,19,19,12,10,4,0];
+
+const nf = n => n.toLocaleString("ru-RU");
+const money = n => nf(Math.round(n)) + " ₽";
+const pct1 = n => n.toFixed(1).replace(".",",") + "%";
+const num1 = n => n.toFixed(1).replace(".",",");
+
+function delta(cur, prev, dir){
+  if(prev === 0) return {txt: cur === 0 ? "0" : "новое", cls:"flat"};
+  const d = (cur - prev)/prev*100;
+  const s = (d>0?"+":"−") + Math.abs(d).toFixed(d>=100||d<=-100?0:1).replace(".",",") + "%";
+  if(dir==="n" || Math.abs(d)<0.05) return {txt:s, cls:"flat"};
+  const goodUp = dir==="up";
+  return {txt:s, cls:(d>0)===goodUp ? "good" : "crit"};
+}
+function deltaPP(cur, prev, dir){
+  const d = cur - prev;
+  const s = (d>0?"+":"−") + Math.abs(d).toFixed(1).replace(".",",") + " п.п.";
+  if(dir==="n"||Math.abs(d)<0.05) return {txt:s, cls:"flat"};
+  return {txt:s, cls:(d>0)===(dir==="up") ? "good" : "crit"};
+}
+
+/* спарклайн: область + акцентная точка на конце + пунктир средней */
+function spark(v, dir){
+  const W=150,H=34,P=3;
+  const mn=Math.min(...v), mx=Math.max(...v), rg=(mx-mn)||1;
+  const x=i=>P+i*(W-2*P)/(v.length-1);
+  const y=n=>H-P-((n-mn)/rg)*(H-2*P);
+  const pts=v.map((n,i)=>x(i)+","+y(n)).join(" ");
+  const avg=v.reduce((a,b)=>a+b,0)/v.length;
+  const last=v[v.length-1], prev=v[v.length-2];
+  let col="var(--mute)";
+  if(dir!=="n"&&prev!==undefined&&last!==prev) col=((last>prev)===(dir==="up"))?"var(--good)":"var(--crit)";
+  return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" aria-hidden="true">
+    <polyline points="${x(0)},${H-P} ${pts} ${x(v.length-1)},${H-P}" fill="var(--accent-soft)" stroke="none"/>
+    <line x1="${P}" y1="${y(avg)}" x2="${W-P}" y2="${y(avg)}" stroke="var(--grid)" stroke-width="1" stroke-dasharray="2 3"/>
+    <polyline points="${pts}" fill="none" stroke="${col}" stroke-width="1.6" stroke-linejoin="round"/>
+    <circle cx="${x(v.length-1)}" cy="${y(last)}" r="2.9" fill="${col}"/></svg>`;
+}
+
+/* столбчатый график: прямые подписи, линия-референс, без легенды */
+function bars(v, opt){
+  const o=Object.assign({fmt:nf, ref:null, refLabel:"", dir:"n", h:186},opt||{});
+  const W=560,H=o.h,PL=6,PR=6,PT=24,PB=26;
+  const mx=Math.max(...v, o.ref||0)*1.12||1;
+  const bw=(W-PL-PR)/v.length, iw=Math.min(52,bw*.62);
+  const y=n=>PT+(1-n/mx)*(H-PT-PB);
+  let s=`<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" role="img">`;
+  if(o.ref!=null){
+    s+=`<line x1="${PL}" y1="${y(o.ref)}" x2="${W-PR}" y2="${y(o.ref)}" stroke="var(--mute)" stroke-width="1" stroke-dasharray="4 4" opacity=".7"/>`;
+    s+=`<text x="${W-PR}" y="${y(o.ref)-5}" text-anchor="end" font-size="10.5" fill="var(--mute)" font-family="var(--mono)">${o.refLabel}</text>`;
+  }
+  v.forEach((n,i)=>{
+    const cx=PL+bw*i+bw/2, hgt=Math.max(1,(H-PT-PB)-(y(n)-PT));
+    const isLast=i===v.length-1;
+    s+=`<rect x="${cx-iw/2}" y="${y(n)}" width="${iw}" height="${hgt}" rx="1"
+         fill="${isLast?"var(--accent)":"var(--mute)"}" opacity="${isLast?".95":".38"}"/>`;
+    s+=`<text x="${cx}" y="${y(n)-6}" text-anchor="middle" font-size="11.5" font-family="var(--mono)"
+         fill="${isLast?"var(--ink)":"var(--mute)"}" font-weight="${isLast?"600":"400"}">${o.fmt(n)}</text>`;
+    s+=`<text x="${cx}" y="${H-8}" text-anchor="middle" font-size="11" fill="var(--mute)">${M[i]}</text>`;
+  });
+  return s+"</svg>";
+}
+
+function tableMonthly(rows){
+  let s=`<div class="scroll"><table><thead><tr><th>Метрика</th>`+
+    M.map(m=>`<th class="n">${m}</th>`).join("")+`<th class="n">Δ июл/июн</th></tr></thead><tbody>`;
+  rows.forEach(r=>{
+    const v=D[r.key], fmt=r.fmt||nf;
+    const d=r.pp ? deltaPP(v[5],v[4],r.dir) : delta(v[5],v[4],r.dir);
+    s+=`<tr><td class="name">${r.label}</td>`+v.map(x=>`<td class="n">${fmt(x)}</td>`).join("")+
+       `<td class="n"><span class="chip ${d.cls}">${d.txt}</span></td></tr>`;
+  });
+  return s+"</tbody></table></div>";
+}
+
+/* ---------- KPI ---------- */
+const KPI=[
+ {k:"Обращений в июле",key:"created",dir:"n",fmt:nf,state:"warn"},
+ {k:"Решено за месяц",key:"solved",dir:"up",fmt:nf,state:"good"},
+ {k:"Среднее решение, дней",key:"avgD",dir:"down",fmt:num1,state:"warn"},
+ {k:"Медиана решения, дней",key:"medD",dir:"down",fmt:num1,state:"good"},
+ {k:"Компенсации клиентам",key:"compSum",dir:"down",fmt:money,state:"good"},
+ {k:"Реализовано инициатив",key:"initiatives",dir:"up",fmt:nf,state:"crit"}
+];
+document.getElementById("rail").innerHTML = KPI.map(c=>{
+  const v=D[c.key], d=delta(v[5],v[4],c.dir);
+  return `<div class="kpi is-${c.state}"><div class="k">${c.k}</div>
+    <div class="v">${c.fmt(v[5])}</div>
+    <div class="row"><span class="chip ${d.cls}">${d.txt}</span>${spark(v,c.dir)}</div></div>`;
+}).join("") + `<div class="kpi is-crit"><div class="k">Ждёт запчасть — остаток на сегодня</div>
+  <div class="v">19 <small>ср. 64 дн</small></div>
+  <div class="row"><span class="chip crit">3 старше 90 дней</span></div></div>`;
+
+/* ---------- вкладки ---------- */
+const TABS=[
+ ["flow","Поток и обработка", ()=>`
+  <div class="panel">
+    <h2>Нагрузка вернулась к февральскому уровню, а закрывать стали меньше</h2>
+    <p class="cap">Создано обращений в месяц · пунктир — среднее за полгода</p>
+    ${bars(D.created,{ref:117,refLabel:"среднее 117"})}
+    ${tableMonthly([
+      {label:"Создано обращений",key:"created",dir:"n"},
+      {label:"— в т.ч. SNISENG",key:"sniseng",dir:"n"},
+      {label:"Закрыто за месяц",key:"closed",dir:"up"},
+      {label:"Решено — «ВОПРОС РЕШЕН»",key:"solved",dir:"up"},
+      {label:"Закрыто без решения",key:"unsolved",dir:"down"},
+      {label:"Доля решённых от закрытых",key:"shareSolved",dir:"up",fmt:pct1,pp:true}
+    ])}
+    <div class="take"><b>Июль дал самый большой вход с февраля — 133 обращения</b> при среднем 117 за полгода. Решили 93 — это выше июня, но ниже февраля и мая. Доля решённых от закрытых 88,6% — ровно средний уровень, не провал и не рекорд.
+    <br><br>SNISENG растёт быстрее всего: 0 → 2 → 4 → 12 за четыре месяца. Пока это 9% потока, но темп такой, что к осени бренд начнёт заметно грузить сервис.</div>
+  </div>
+  <div class="panel">
+    <h2>Закрытых без решения стало больше в полтора раза</h2>
+    <p class="cap">Обращений, закрытых со статусом «Закрыто и не реализовано»</p>
+    ${bars(D.unsolved,{ref:14.7,refLabel:"среднее 14,7"})}
+    <div class="take crit"><b>Причина закрытия не указана ни у одного из 12 июльских.</b> Поле в воронке есть, но не заполняется — поэтому нельзя отличить нерелевантное обращение от клиента, которому мы не смогли помочь. Это разные вещи и разные выводы.</div>
+  </div>`],
+
+ ["time","Сроки", ()=>`
+  <div class="panel">
+    <h2>Июль — не провал по срокам, а возврат к обычному уровню</h2>
+    <p class="cap">Среднее время решения, дней · пунктир — среднее за полгода</p>
+    ${bars(D.avgD,{fmt:num1,ref:10.3,refLabel:"среднее 10,3",dir:"down"})}
+    <div class="take"><b>Июнь был лучшим месяцем полугодия — 7,1 дня.</b> Сравнение «июль хуже июня на 42%» верно арифметически, но вводит в заблуждение: 10,1 дня — это ровно средний уровень февраля–июля. Правильная формулировка — не «резко ухудшились», а «не удержали лучший результат».</div>
+  </div>
+  <div class="grid2">
+    <div class="panel">
+      <h2>Половину обращений закрываем за трое суток</h2>
+      <p class="cap">Медиана решения, дней</p>
+      ${bars(D.medD,{fmt:num1,h:150,dir:"down"})}
+    </div>
+    <div class="panel">
+      <h2>Проблема живёт в хвосте, а не в скорости</h2>
+      <p class="cap">90-й перцентиль, дней — десятая часть обращений дольше</p>
+      ${bars(D.p90D,{fmt:num1,h:150,dir:"down"})}
+    </div>
+  </div>
+  <div class="panel">
+    ${tableMonthly([
+      {label:"Среднее время решения, дней",key:"avgD",dir:"down",fmt:num1},
+      {label:"Медиана, дней",key:"medD",dir:"down",fmt:num1},
+      {label:"90-й перцентиль, дней",key:"p90D",dir:"down",fmt:num1}
+    ])}
+    <div class="take crit"><b>Разрыв между медианой и средним — это и есть диагноз.</b> Медиана 3,2 дня, среднее 10,1: небольшая группа очень долгих обращений вытягивает всю метрику. Улучшать скорость обработки не нужно — она хорошая. Нужно расшивать то, что стоит месяцами.</div>
+  </div>
+  <div class="panel">
+    <h2>Девятнадцать клиентов ждут запчасть, трое — больше полугода</h2>
+    <p class="cap">Возраст обращений в статусе «Ждёт запчасть», дней · снимок на 03.08.2026</p>
+    <div class="scroll"><table><thead><tr><th>Возраст</th><th class="n">Обращений</th><th style="width:55%">Доля остатка</th></tr></thead><tbody>
+      ${[["Больше 180 дней",3,"crit"],["90–180 дней",0,"crit"],["30–90 дней",8,"warn"],["До 30 дней",8,"mute"]]
+        .map(([l,n,c])=>`<tr><td class="name">${l}</td><td class="n">${n}</td>
+        <td><span class="bar ${c==="mute"?"dim":""}" style="width:${n/19*100}%;background:${c==="crit"?"var(--crit)":c==="warn"?"var(--warn)":""}"></span></td></tr>`).join("")}
+    </tbody></table></div>
+    <div class="take crit"><b>252, 192 и 182 дня — три обращения, которые старше полугода.</b> Средний возраст остатка 64 дня. Это не сервисная проблема: сервис не может ускориться, пока нет детали. Здесь весь проигранный месяц, и решается он на складе, а не в обработке.</div>
+  </div>`],
+
+ ["why","Причины обращений", ()=>`
+  <div class="panel">
+    <h2>Электроника 210-й серии — причина номер один</h2>
+    <p class="cap">Июль 2026 · поле «Комментарий для сервиса», заполнен 61 из 133 · категории пересекаются</p>
+    <div class="scroll"><table><thead><tr><th>Причина</th><th class="n">Обращений</th><th style="width:42%"></th><th>Зона</th></tr></thead><tbody>
+    ${REASONS.map(([l,n,c])=>`<tr><td class="name">${l}</td><td class="n">${n}</td>
+      <td><span class="bar ${c==="mute"?"dim":""}" style="width:${n/16*100}%;background:${c==="crit"?"var(--crit)":c==="warn"?"var(--warn)":""}"></span></td>
+      <td style="font-size:12.5px;color:var(--mute)">${c==="crit"?"Продукт":c==="warn"?"Смежники":"Сервис штатно"}</td></tr>`).join("")}
+    </tbody></table></div>
+    <div class="take crit"><b>Три независимых источника показывают одно и то же.</b> Электроника даёт 16 обращений из 61; плата управления восемь раз продана как запчасть на 52 850 ₽ за март–июнь; в июле пришёл возврат с двумя сломанными платами. Совпадение трёх выгрузок — это уже не гипотеза, а диагноз.</div>
+    <div class="take"><b>Каждое пятое обращение — не поломка.</b> Одиннадцать из 61 — консультация: как нарезать резьбу, как настроить, почему не выходит. Это снимается инструкцией и видео, без единой доработки железа — и это самая дешёвая разгрузка сервиса из возможных.</div>
+  </div>
+  <div class="panel">
+    <h2>Записывать причину начали только в июле</h2>
+    <p class="cap">Заполнен «Комментарий для сервиса», шт</p>
+    ${bars(D.comments,{dir:"up"})}
+    <div class="take good"><b>Ноль, ноль, ноль, один, один, шестьдесят один.</b> В июле процесс наконец завели. Это первый месяц, когда сервис вообще способен что-то сказать продукту цифрой, а не ощущением. Следующий шаг — заменить свободный текст справочником, чтобы статистика считалась сама.</div>
+  </div>`],
+
+ ["money","Деньги", ()=>`
+  <div class="panel">
+    <h2>Компенсации клиентам — лучший месяц полугодия</h2>
+    <p class="cap">Сумма компенсаций, ₽ · пунктир — среднее за полгода</p>
+    ${bars(D.compSum,{fmt:money,ref:24738,refLabel:"среднее 24 738 ₽",dir:"down"})}
+    <div class="take good"><b>4 490 ₽ против среднего 24 738 ₽.</b> В июне мы девять раз доплачивали клиентам, в июле — дважды. Это живые деньги, оставшиеся в компании. Оговорка: проверить, что компенсации не перестали просто фиксировать — в июле одновременно выросли возвраты.</div>
+  </div>
+  <div class="grid2">
+    <div class="panel">
+      <h2>Сумму апсейла делает одна крупная сделка</h2>
+      <p class="cap">Cash in, ₽</p>
+      ${bars(D.upCash,{fmt:money,h:150,dir:"up"})}
+    </div>
+    <div class="panel">
+      <h2>Число сделок при этом почти не меняется</h2>
+      <p class="cap">Апсейлов, шт</p>
+      ${bars(D.upN,{h:150,dir:"up"})}
+    </div>
+  </div>
+  <div class="panel">
+    ${tableMonthly([
+      {label:"Апсейлов, шт",key:"upN",dir:"up"},
+      {label:"Апсейл, cash in ₽",key:"upCash",dir:"up",fmt:money},
+      {label:"Средний чек апсейла, ₽",key:"upAvg",dir:"up",fmt:money},
+      {label:"Компенсаций, шт",key:"compN",dir:"down"},
+      {label:"Сумма компенсаций, ₽",key:"compSum",dir:"down",fmt:money},
+      {label:"Возвратов оборудования, шт",key:"returns",dir:"down"}
+    ])}
+    <div class="take"><b>Помесячная сумма апсейла сама по себе ничего не говорит.</b> Февраль сделали 310 000 ₽ на 14 сделках, июнь — 186 020 ₽, из которых 128 500 ₽ это один станок RX360K1000. Число сделок всё это время держится в диапазоне 11–20. Смотреть надо на средний чек и структуру позиций, а не на итог месяца.</div>
+    <div class="take crit"><b>Половина апсейла — это замена сломавшегося.</b> Плата управления, потенциометры, ремни. Продажа клиенту детали, которая вышла из строя по нашей вине, попадает в выручку сервиса и маскирует проблему продукта хорошей цифрой. Замену дефектных узлов нужно вывести в отдельную строку.</div>
+  </div>`],
+
+ ["voc","Голос клиента", ()=>`
+  <div class="panel">
+    <h2>Полгода собираем материал и ни разу ничего не внедрили</h2>
+    <p class="cap">Реализованные инициативы, шт · план 1-1-1-1-5-5</p>
+    ${bars(D.initiatives,{dir:"up"})}
+    <div class="take crit"><b>Ноль во всех шести месяцах.</b> За это время собрано 36 инсайтов и 23 предложения по улучшению. Материал есть, механизма передачи нет: в учёте не отмечается, кому ушёл инсайт и что с ним стало. Предложений при этом становится меньше третий месяц подряд — 5, 4, 5, 4, 3, 2. Люди перестают предлагать, когда предыдущее никуда не двигается.</div>
+  </div>
+  <div class="panel">
+    <h2>План прозвона живёт своей жизнью</h2>
+    <p class="cap">Выполнение плана прозвона, % · план менялся 634 → 741 → 1054 → 500 → 342 → 404</p>
+    ${bars(D.callPct,{fmt:pct1,ref:100,refLabel:"план 100%",dir:"up"})}
+    <div class="take crit"><b>В марте выполнили 4,9%.</b> Разброс от 4,9% до 78,6% при плане, который скакал втрое, — это не метрика, а шум. Пока план не поставлен заново от реальной пропускной способности, любые выводы по прозвону бессмысленны.</div>
+  </div>
+  <div class="panel">
+    ${tableMonthly([
+      {label:"Лидов в прозвон — факт",key:"callFact",dir:"up"},
+      {label:"Выполнение плана прозвона",key:"callPct",dir:"up",fmt:pct1,pp:true},
+      {label:"Инсайты клиентов",key:"insights",dir:"up"},
+      {label:"Отзывы и благодарности",key:"reviews",dir:"up"},
+      {label:"Предложения по улучшению",key:"proposals",dir:"up"},
+      {label:"Реализованные инициативы",key:"initiatives",dir:"up"}
+    ])}
+  </div>`],
+
+ ["quality","Качество данных", ()=>`
+  <div class="panel">
+    <h2>Негатив равен нулю шесть месяцев подряд — шкала не работает</h2>
+    <p class="cap">Результат решения, обращений в месяц</p>
+    ${tableMonthly([
+      {label:"Позитив",key:"positive",dir:"up"},
+      {label:"Нейтрально",key:"neutral",dir:"n"},
+      {label:"Негатив",key:"negative",dir:"down"},
+      {label:"Поле не заполнено",key:"empty",dir:"down"},
+      {label:"Заполняемость поля",key:"fillRate",dir:"up",fmt:pct1,pp:true}
+    ])}
+    <div class="take crit"><b>Поле заполняется на 75–91% — дисциплина нормальная. И при этом за полгода ни одного «Негатива».</b> За те же шесть месяцев было 17 возвратов, компенсации на 148 431 ₽ и кейс с юридическим риском. Недовольные клиенты были. Значит, значение «Негатив» просто не используется: менеджер ставит «Позитив» по факту закрытия, а не по реакции клиента.</div>
+  </div>
+  <div class="panel">
+    <h2>NPS и CSAT: поля в карточке готовы и не заполнены ни разу</h2>
+    <p class="cap">Собрано оценок за шесть месяцев</p>
+    <div class="scroll"><table><thead><tr><th>Поле в карточке сделки</th><th class="n">Оценок за полгода</th><th>Что это</th></tr></thead><tbody>
+      <tr><td class="name">«Порекомендуете нас? — от 0 до 10»</td><td class="n">0</td><td style="color:var(--mute);font-size:12.5px">NPS</td></tr>
+      <tr><td class="name">«Наш сервис — на сколько из 5?»</td><td class="n">0</td><td style="color:var(--mute);font-size:12.5px">CSAT</td></tr>
+      <tr><td class="name">«Сервисная заявка?»</td><td class="n">0</td><td style="color:var(--mute);font-size:12.5px">классификация</td></tr>
+    </tbody></table></div>
+    <div class="take"><b>Это самая дешёвая победа во всей панели.</b> Механизм уже настроен — вопрос стоит в карточке. Его просто не задают. При 93 решённых обращениях в месяц тридцать ответов до конца августа — вопрос дисциплины, а не бюджета и не прозвона.</div>
+  </div>`],
+
+ ["refl","Рефлексия", ()=>`
+  <div class="panel refl">
+    <h2>Что я вижу в этих цифрах</h2>
+    <p class="cap">Цифра → причина → доказательство → действие. <span class="tagk">знаю</span> — есть данные, <span class="tagp">предполагаю</span> — версия.</p>
+
+    <h3>1. Сервис — не узкое место, и это главный вывод полугодия</h3>
+    <p>Медиана решения держится на уровне 1–3 дней все шесть месяцев: 6,8 → 4,0 → 1,9 → 0,9 → 2,8 → 3,2. Половину потока сервис закрывает быстрее, чем клиент успевает написать повторно. <span class="tagk">знаю</span> — расчёт по датам создания и закрытия в CRM.</p>
+    <p>Но среднее втрое выше медианы, и разрыв стабилен. Значит проблема не в скорости работы, а в небольшой группе обращений, которые стоят месяцами. Она локализована точно: 19 обращений в статусе «Ждёт запчасть», средний возраст 64 дня, три старше полугода. <span class="tagk">знаю</span> — прямая выгрузка на 3 августа.</p>
+    <p><b>Отсюда неприятный вывод про нашу же отчётность:</b> мы полгода мерили сервис средним временем решения и обсуждали, почему он медленный. На самом деле мы всё это время мерили работу склада запчастей. Сервису эта метрика не принадлежит.</p>
+
+    <h3>2. Продукт: электроника 210-й серии</h3>
+    <p>Три источника, собранные независимо, дают одну картину. В причинах обращений электроника — 16 из 61. В апсейле плата управления — восемь продаж на 52 850 ₽ за четыре месяца, самая частая позиция. В возвратах июля — плата с двумя сломанными экземплярами. <span class="tagk">знаю</span> по всем трём выгрузкам.</p>
+    <p>Позиция, которую мы одновременно много продаём как запчасть и много меняем по возврату, — это не ассортимент, а ресурс, который не держит. <span class="tagp">предполагаю</span>, что часть выручки апсейла последние полгода — это фактически гарантийные случаи, которые клиент оплатил сам, не зная, что это дефект.</p>
+
+    <h3>3. Мы собираем голос клиента и не пользуемся им</h3>
+    <p>За полгода 36 инсайтов, 23 предложения по улучшению, 95 отзывов и благодарностей. Реализованных инициатив — ноль. Все шесть месяцев, при планах 1, 1, 1, 1, 5, 5. <span class="tagk">знаю</span> — строка 39 «Основного отчёта».</p>
+    <p>Предложений становится меньше третий месяц подряд, и я не считаю это совпадением: люди перестают предлагать, когда предыдущее ничем не заканчивается. <span class="tagp">предполагаю</span> — прямых данных о мотивации нет, но динамика 5-4-5-4-3-2 на фоне нулевого внедрения выглядит именно так.</p>
+
+    <h3>4. Половина панели измеряет не то, что нужно</h3>
+    <ul>
+      <li><b>Негатив = 0 шесть месяцев подряд</b> при заполняемости поля 75–91%. За тот же период 17 возвратов и 148 431 ₽ компенсаций. Шкала не работает: «Позитив» ставится по факту закрытия обращения, а не по реакции клиента.</li>
+      <li><b>NPS и CSAT не заполнены ни разу</b> — при том что поля в карточке настроены и ждут. Мы не «не можем измерить удовлетворённость», мы её не спрашиваем.</li>
+      <li><b>План прозвона</b> менялся 634 → 741 → 1054 → 500 → 342 → 404, выполнение — от 4,9% до 78,6%. Это шум, а не показатель.</li>
+      <li><b>Причина закрытия</b> не заполнена ни у одного из 12 июльских обращений, закрытых без решения.</li>
+    </ul>
+    <p>Сложив это, получаю неудобную мысль: <b>по половине показателей мы отчитываемся цифрами, которых на самом деле не измеряем.</b> И самое дорогое здесь не отсутствие данных, а ложное спокойствие — ноль негатива полгода подряд читается как «в сервисе всё хорошо».</p>
+
+    <h3>5. Что июль сделал хорошо</h3>
+    <p>Два реальных достижения, и оба стоит закрепить. Компенсации клиентам упали до 4 490 ₽ против среднего 24 738 ₽ — лучший месяц полугодия. И впервые начали записывать причину обращения: 61 комментарий против одного в июне. Именно благодаря этому у нас вообще появился блок «Причины» — до июля его нельзя было построить.</p>
+
+    <h3>6. Что делаю дальше</h3>
+    <ul>
+      <li><b>До 10 августа</b> — выношу 19 обращений «Ждёт запчасть» на планёрку списком с возрастом каждого. Три старше полугода разбираем поимённо.</li>
+      <li><b>До 10 августа</b> — свожу с Алексеем электронику 210-й серии и CJM360F750 в реестр доработок, с привязкой к дате ближайшего контейнера.</li>
+      <li><b>С 1 августа</b> — вопрос про оценку задаётся при закрытии каждого обращения. Цель — 30 ответов NPS до конца месяца.</li>
+      <li><b>С 1 августа</b> — «Причина обращения» становится справочником, а не свободным текстом; «Причина закрытия» — обязательной.</li>
+      <li><b>До 15 августа</b> — переопределяю шкалу результата решения: «Негатив» ставится по реакции клиента. Первым делом сверяю с ней все обращения, закончившиеся возвратом или компенсацией.</li>
+      <li><b>До 20 августа</b> — ставлю план прозвона заново, от фактической пропускной способности, а не от желаемого.</li>
+    </ul>
+
+    <h3>7. Вопросы, которые я выношу на CEO</h3>
+    <ul>
+      <li><b>Страховой запас запчастей.</b> 19 клиентов ждут в среднем 64 дня, трое — больше полугода. Заводим склад критичных позиций или принимаем срок ожидания как норму и честно пишем его в карточку товара? Третьего варианта нет.</li>
+      <li><b>Электроника 210-й серии.</b> Расходник с нормальным ресурсом или дефект конструкции? От ответа зависит, идёт позиция в доработку к заводу или в комплект ЗИП. Решение нужно до 15 августа, иначе доработка не попадёт в ближайший контейнер.</li>
+      <li><b>Апсейл на замене дефектных узлов.</b> Считаем ли выручкой сервиса продажу детали клиенту, у которого она сломалась по нашей вине? Сейчас считаем — и это красит проблему продукта в зелёный.</li>
+    </ul>
+  </div>`]
+];
+
+const tabsEl=document.getElementById("tabs"), panelsEl=document.getElementById("panels");
+tabsEl.innerHTML=TABS.map(([id,label],i)=>
+  `<button class="tab" role="tab" id="t-${id}" aria-controls="p-${id}" aria-selected="${i===0}">${label}</button>`).join("");
+panelsEl.innerHTML=TABS.map(([id,label,render],i)=>
+  `<section role="tabpanel" id="p-${id}" aria-labelledby="t-${id}" ${i?"hidden":""}>${render()}</section>`).join("");
+tabsEl.addEventListener("click",e=>{
+  const b=e.target.closest(".tab"); if(!b) return;
+  TABS.forEach(([id])=>{
+    const t=document.getElementById("t-"+id), p=document.getElementById("p-"+id);
+    const on=t===b; t.setAttribute("aria-selected",on); p.hidden=!on;
+  });
+});
+
+const root=document.documentElement, btn=document.getElementById("themeBtn");
+btn.addEventListener("click",()=>{
+  const cur=root.getAttribute("data-theme") ||
+    (matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");
+  root.setAttribute("data-theme",cur==="dark"?"light":"dark");
+});
+</script>
+</body>
+</html>
