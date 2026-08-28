@@ -189,10 +189,10 @@ svg{display:block;max-width:100%}
   <div>
     <div class="brand">WEISAN · Сервис и клиентский опыт</div>
     <h1>Приборная панель сервиса</h1>
-    <div class="sub">Февраль — июль 2026. Шесть месяцев, помесячно.</div>
+    <div class="sub">Февраль — август 2026, помесячно. Цифры тянутся из amoCRM, обновлено 28.08.2026, 20:49. Текстовые выводы и рефлексия — за июль, их пишет человек.</div>
   </div>
   <div style="display:flex;gap:14px;align-items:flex-end">
-    <div class="stamp">снимок 03.08.2026<br>amoCRM 7777146<br>+ таблица клиентского опыта</div>
+    <div class="stamp">живые данные 28.08.2026, 20:49<br>amoCRM 7777146<br>+ таблица клиентского опыта</div>
     <button class="theme" id="themeBtn" type="button">Тема</button>
   </div>
 </header>
@@ -211,15 +211,15 @@ svg{display:block;max-width:100%}
 </div>
 
 <script>
-const M = ["Фев","Мар","Апр","Май","Июн","Июл"];
+const M = ["Фев","Мар","Апр","Май","Июн","Июл","Авг"];
 const D = {
-  created:[137,110,84,123,115,133], sniseng:[0,0,0,2,4,12],
-  closed:[165,121,79,115,92,105], solved:[140,93,70,109,84,93], unsolved:[25,28,9,6,8,12],
-  shareSolved:[84.8,76.9,88.6,94.8,91.3,88.6],
-  avgD:[15.2,10.4,7.9,11.1,7.1,10.1], medD:[6.8,4.0,1.9,0.9,2.8,3.2], p90D:[39.1,25.2,22.1,35.4,15.9,21.7],
-  positive:[108,74,72,109,100,108], neutral:[4,5,3,1,3,3], negative:[0,0,0,0,0,0],
-  empty:[25,27,9,11,12,22], fillRate:[81.8,75.5,89.3,91.1,89.6,83.5],
-  compN:[5,2,6,8,9,2], compSum:[34809,2409,46041,22242,38440,4490],
+  created:[137,110,84,123,115,134,105], sniseng:[0,0,0,3,4,12,2],
+  closed:[165,121,79,115,92,106,78], solved:[140,93,70,109,84,94,75], unsolved:[25,28,9,6,8,12,3],
+  shareSolved:[84.8,76.9,88.6,94.8,91.3,88.7,96.2],
+  avgD:[15.2,10.4,7.9,11.1,7.1,10.1,9.0], medD:[6.8,4.0,1.9,0.9,2.5,3.4,2.0], p90D:[36.8,25.2,21.0,32.8,15.9,21.7,28.0],
+  positive:[108,74,72,112,101,117,69], neutral:[4,5,3,2,3,3,2], negative:[0,0,0,0,0,0,0],
+  empty:[25,31,9,9,11,14,34], fillRate:[81.8,71.8,89.3,92.7,90.4,89.6,67.6],
+  compN:[5,2,6,8,9,2,2], compSum:[34809,2409,46041,22242,38440,4490,4439],
   upN:[14,11,17,20,15,17], upCash:[310000,93700,142695,95350,186020,157750],
   upAvg:[22143,8518,8394,4768,12401,9279],
   returns:[3,5,3,3,0,3],
@@ -227,13 +227,19 @@ const D = {
   insights:[4,4,5,10,5,8], reviews:[16,9,16,29,14,11], proposals:[5,4,5,4,3,2], initiatives:[0,0,0,0,0,0],
   comments:[0,0,0,1,1,61], nps:[0,0,0,0,0,0], csat:[0,0,0,0,0,0]
 };
-const REASONS = [["Электроника: плата, потенциометр, ЭГ, двигатель",16,"crit"],
- ["Консультация: как работать, настройка, резьба",11,"warn"],
- ["Механика: шестерни, ремни, подшипники, гайки",10,"crit"],
- ["Заказ запчасти",9,"mute"],["Масло, СОЖ, расходники",4,"mute"],
- ["Гарантия — вопрос или спор",4,"warn"],["Комплектация: прислали не то",3,"warn"],
- ["Геометрия, люфты, вибрация",2,"crit"],["Доставка и повреждения",1,"warn"]];
-const WAIT = [252,192,182,81,77,69,64,55,49,48,39,22,20,19,19,12,10,4,0];
+const REASONS = [["Помощь в настройке",25,"warn"],
+ ["Консультация инженера",22,"mute"],
+ ["Плата",8,"crit"],
+ ["Дефект конструкции",8,"crit"],
+ ["Потенциометр",6,"warn"],
+ ["Маточная гайка",4,"crit"],
+ ["Ремень",4,"warn"],
+ ["Продажа/апсейл/подарок",3,"mute"],
+ ["Электрика",2,"crit"],
+ ["Мех.гитара",1,"crit"],
+ ["Двигатель",1,"crit"],
+ ["УЦИ",1,"crit"]];
+const WAIT = [277,217,207,94,89,80,73,64,45,44,37,35,25,20,18,9,3,1];
 
 const nf = n => n.toLocaleString("ru-RU");
 const money = n => nf(Math.round(n)) + " ₽";
@@ -302,7 +308,7 @@ function tableMonthly(rows){
     M.map(m=>`<th class="n">${m}</th>`).join("")+`<th class="n">Δ июл/июн</th></tr></thead><tbody>`;
   rows.forEach(r=>{
     const v=D[r.key], fmt=r.fmt||nf;
-    const d=r.pp ? deltaPP(v[5],v[4],r.dir) : delta(v[5],v[4],r.dir);
+    const d=r.pp ? deltaPP(v[v.length-2],v[v.length-3],r.dir) : delta(v[v.length-2],v[v.length-3],r.dir);
     s+=`<tr><td class="name">${r.label}</td>`+v.map(x=>`<td class="n">${fmt(x)}</td>`).join("")+
        `<td class="n"><span class="chip ${d.cls}">${d.txt}</span></td></tr>`;
   });
@@ -311,7 +317,7 @@ function tableMonthly(rows){
 
 /* ---------- KPI ---------- */
 const KPI=[
- {k:"Обращений в июле",key:"created",dir:"n",fmt:nf,state:"warn"},
+ {k:"Обращений · июль",key:"created",dir:"n",fmt:nf,state:"warn"},
  {k:"Решено за месяц",key:"solved",dir:"up",fmt:nf,state:"good"},
  {k:"Среднее решение, дней",key:"avgD",dir:"down",fmt:num1,state:"warn"},
  {k:"Медиана решения, дней",key:"medD",dir:"down",fmt:num1,state:"good"},
@@ -319,9 +325,9 @@ const KPI=[
  {k:"Негатив — вопрос не закрыт",key:"negative",dir:"down",fmt:nf,state:"good"}
 ];
 document.getElementById("rail").innerHTML = KPI.map(c=>{
-  const v=D[c.key], d=delta(v[5],v[4],c.dir);
+  const v=D[c.key], d=delta(v[v.length-2],v[v.length-3],c.dir);
   return `<div class="kpi is-${c.state}"><div class="k">${c.k}</div>
-    <div class="v">${c.fmt(v[5])}</div>
+    <div class="v">${c.fmt(v[v.length-2])}</div>
     <div class="row"><span class="chip ${d.cls}">${d.txt}</span>${spark(v,c.dir)}</div></div>`;
 }).join("") + `<div class="kpi is-crit"><div class="k">Ждёт запчасть — остаток на сегодня</div>
   <div class="v">19 <small>ср. 64 дн</small></div>
