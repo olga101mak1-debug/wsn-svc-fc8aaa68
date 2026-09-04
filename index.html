@@ -373,6 +373,7 @@ const COLS = () => SELM===null ? M.map((m,i)=>i) : [SELM-1, SELM].filter(i=>i>=0
 const reasonsNow = () => SELM===null ? REASONS
   : ((typeof REASONS_M!=="undefined" && REASONS_M[MKEY(SELM)]) || []);
 const reasonsMax = () => Math.max(1, ...reasonsNow().map(r=>r[1]));
+const reasonsTotal = () => Math.max(1, reasonsNow().reduce((a,b)=>a+b[1],0));
 
 
 /* ——— Выводы считаются из данных, а не вписываются руками ———
@@ -923,16 +924,15 @@ function monthPanel(i){
     s+=`<div class="panel"><h2>С чем обращались в ${MPRE(i)}</h2>
       <p class="cap">Поле «Причина обращения» в amoCRM · заполнено ${tot} из ${D.created[i]} обращений</p>
       <div class="scroll"><table><thead><tr><th>Причина</th><th class="n">Обращений</th><th>Доля</th></tr></thead><tbody>`;
-    rs.forEach(([name,n,tone])=>{
-      const col = tone==="crit"?"var(--crit)":tone==="warn"?"var(--warn)":"var(--mute)";
+    rs.forEach(([name,n])=>{
       s+=`<tr><td class="name">${name}</td><td class="n">${n}</td>
-        <td><span class="bar" style="width:${Math.max(4,Math.round(n/mx*160))}px;background:${col}"></span>
+        <td><span class="bar" style="width:${Math.max(4,Math.round(n/mx*160))}px"></span>
           <span style="font-family:var(--mono);font-size:11.5px;color:var(--mute);margin-left:7px">${
             tot?Math.round(n/tot*100):0}%</span></td></tr>`;
     });
     s+=`</tbody></table></div>
-      <p class="quiet">Красным — отказы узлов: это вопрос к продукту.
-      Серым — расходники, консультации, настройка и продажи: штатная работа сервиса.</p></div>`;
+      <p class="quiet">Все обращения ведёт наш сервис — по исполнителю они не делятся.
+      Разбивка нужна, чтобы понять, что чинить в продукте, а что снимается инструкцией.</p></div>`;
   }
 
   /* комментарий человека */
@@ -1032,6 +1032,15 @@ function waitTake(){
 const cap1 = t => t.charAt(0).toUpperCase()+t.slice(1);
 
 
+function whyHead(){
+  const rs=reasonsNow();
+  if(!rs.length) return SELM===null ? "Причины обращений пока не размечены"
+                                    : "За "+MPRE(REFI())+" причины не проставлены";
+  const top=rs[0];
+  return (SELM===null ? "Чаще всего обращаются с «"+top[0]+"»"
+                      : "С чем обращались в "+MPRE(REFI()))+
+         " — "+nf(top[1])+" из "+nf(reasonsTotal());
+}
 function whyTake(){
   const rs=reasonsNow(); if(!rs.length) return "За этот месяц причины обращений не проставлены.";
   const tot=rs.reduce((a,b)=>a+b[1],0);
@@ -1039,10 +1048,11 @@ function whyTake(){
   const mute=rs.filter(r=>r[2]==="mute").reduce((a,b)=>a+b[1],0);
   const top=rs[0];
   return "<b>Самая частая причина — «"+top[0]+"»: "+nf(top[1])+" из "+nf(tot)+" размеченных обращений.</b> "+
-    "На отказы узлов приходится "+nf(crit)+" "+plur(crit,"обращение","обращения","обращений")+
-    " ("+pct1(Math.round(crit/tot*1000)/10)+") — это вопрос к продукту. "+
-    "Остальные "+nf(tot-crit)+" — расходники, консультации, настройка и продажи: штатная работа сервиса. "+
-    "Их снимает инструкция и видео, без единой доработки железа.";
+    "Отказы узлов — "+nf(crit)+" "+plur(crit,"обращение","обращения","обращений")+
+    " из "+nf(tot)+" ("+pct1(Math.round(crit/tot*1000)/10)+"): это то, что чинится в продукте. "+
+    "Остальные "+nf(tot-crit)+" — расходники, консультации, настройка и продажи. "+
+    "Их снимает инструкция и видео, без единой доработки железа. "+
+    "Ведёт их всё равно наш сервис — деление тут не про исполнителя, а про то, куда идти с задачей.";
 }
 function moneyHead(){
   const i=REFI();
@@ -1221,12 +1231,12 @@ const TABS=[
 
  ["why","Причины обращений", ()=>`
   <div class="panel">
-    <h2>${SELM===null ? "Электроника 210-й серии — причина номер один" : "С чем обращались в "+MPRE(SELM)}</h2>
+    <h2>${whyHead()}</h2>
     <p class="cap">${SELM===null ? "Последний месяц" : MFULL(SELM)} · поле «Причина обращения» в amoCRM</p>
-    <div class="scroll"><table><thead><tr><th>Причина</th><th class="n">Обращений</th><th style="width:42%"></th><th>Зона</th></tr></thead><tbody>
-    ${reasonsNow().map(([l,n,c])=>`<tr><td class="name">${l}</td><td class="n">${n}</td>
-      <td><span class="bar ${c==="mute"?"dim":""}" style="width:${n/reasonsMax()*100}%;background:${c==="crit"?"var(--crit)":c==="warn"?"var(--warn)":""}"></span></td>
-      <td style="font-size:12.5px;color:var(--mute)">${c==="crit"?"Продукт":"Сервис штатно"}</td></tr>`).join("")}
+    <div class="scroll"><table><thead><tr><th>Причина</th><th class="n">Обращений</th><th style="width:46%"></th><th class="n">Доля</th></tr></thead><tbody>
+    ${reasonsNow().map(([l,n])=>`<tr><td class="name">${l}</td><td class="n">${n}</td>
+      <td><span class="bar" style="width:${n/reasonsMax()*100}%"></span></td>
+      <td class="n" style="font-size:12.5px;color:var(--mute)">${Math.round(n/reasonsTotal()*100)}%</td></tr>`).join("")}
     </tbody></table></div>
     <div class="take crit">${whyTake()}</div>
   </div>
