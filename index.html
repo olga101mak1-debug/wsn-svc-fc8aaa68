@@ -217,6 +217,7 @@ footer{margin-top:34px;padding-top:16px;border-top:1px solid var(--line);font-si
 svg{display:block;max-width:100%}
 @media (prefers-reduced-motion:no-preference){.tab,.kpi{transition:border-color .15s,color .15s}}
 @media print{body{background:#fff}.tab{display:none}section[hidden]{display:block!important}}
+  body[data-mode="month"] .take{display:none}
 </style>
 </head>
 <body>
@@ -355,20 +356,31 @@ function bars(v, opt){
   return s+"</svg>";
 }
 
+/* Выбранный месяц: null — вкладка «Итого», иначе индекс месяца.
+   От него зависят и колонки таблиц, и набор вкладок. */
+let SELM = null;
+const COLS = () => SELM===null ? M.map((m,i)=>i) : [SELM-1, SELM].filter(i=>i>=0);
+/* Причины: на «Итого» — последний месяц, внутри месяца — его собственные. */
+const reasonsNow = () => SELM===null ? REASONS
+  : ((typeof REASONS_M!=="undefined" && REASONS_M[MKEY(SELM)]) || []);
+const reasonsMax = () => Math.max(1, ...reasonsNow().map(r=>r[1]));
+
 function tableMonthly(rows){
   let s=`<div class="scroll"><table><thead><tr><th>Метрика</th>`+
-    M.map(m=>`<th class="n">${m}</th>`).join("")+`<th class="n">Δ ${M[M.length-2]}/${M[M.length-3]}</th></tr></thead><tbody>`;
+    COLS().map(i=>`<th class="n">${M[i]}</th>`).join("")+
+    `<th class="n">${SELM===null ? `Δ ${M[M.length-2]}/${M[M.length-3]}` : "Изменение"}</th></tr></thead><tbody>`;
   rows.forEach(r=>{
     const v=D[r.key], fmt=r.fmt||nf;
     // Ряд может быть короче списка месяцев: часть цифр приходит из таблицы
     // клиентского опыта и отстаёт. Тогда недостающие месяцы — прочерк, а не сдвиг
     // строки влево: иначе значения встают под чужими месяцами, а знак изменения
     // считается по паре месяцев, которая вообще не последняя.
-    const a=v[M.length-2], b=v[M.length-3];
+    const ai = SELM===null ? M.length-2 : SELM, bi = ai-1;
+    const a=v[ai], b=bi>=0?v[bi]:undefined;
     const d=(a===undefined||b===undefined) ? {txt:"—",cls:"flat"}
             : (r.pp ? deltaPP(a,b,r.dir) : delta(a,b,r.dir));
     s+=`<tr><td class="name">${r.label}</td>`+
-       M.map((m,i)=>`<td class="n">${v[i]===undefined?"—":fmt(v[i])}</td>`).join("")+
+       COLS().map(i=>`<td class="n">${v[i]===undefined?"—":fmt(v[i])}</td>`).join("")+
        `<td class="n"><span class="chip ${d.cls}">${d.txt}</span></td></tr>`;
   });
   return s+"</tbody></table></div>";
@@ -843,11 +855,11 @@ const TABS=[
 
  ["why","Причины обращений", ()=>`
   <div class="panel">
-    <h2>Электроника 210-й серии — причина номер один</h2>
-    <p class="cap">Август 2026 · поле «Причина обращения» в amoCRM, заполнено 85 из 105 обращений</p>
+    <h2>${SELM===null ? "Электроника 210-й серии — причина номер один" : "С чем обращались в "+MPRE(SELM)}</h2>
+    <p class="cap">${SELM===null ? "Последний месяц" : MFULL(SELM)} · поле «Причина обращения» в amoCRM</p>
     <div class="scroll"><table><thead><tr><th>Причина</th><th class="n">Обращений</th><th style="width:42%"></th><th>Зона</th></tr></thead><tbody>
-    ${REASONS.map(([l,n,c])=>`<tr><td class="name">${l}</td><td class="n">${n}</td>
-      <td><span class="bar ${c==="mute"?"dim":""}" style="width:${n/16*100}%;background:${c==="crit"?"var(--crit)":c==="warn"?"var(--warn)":""}"></span></td>
+    ${reasonsNow().map(([l,n,c])=>`<tr><td class="name">${l}</td><td class="n">${n}</td>
+      <td><span class="bar ${c==="mute"?"dim":""}" style="width:${n/reasonsMax()*100}%;background:${c==="crit"?"var(--crit)":c==="warn"?"var(--warn)":""}"></span></td>
       <td style="font-size:12.5px;color:var(--mute)">${c==="crit"?"Продукт":c==="warn"?"Смежники":"Сервис штатно"}</td></tr>`).join("")}
     </tbody></table></div>
     <div class="take crit"><b>Электроника — самая частая причина, и это надо проверить у продукта.</b> 16 обращений из 61 плюс июльский возврат с двумя сломанными платами. Продажи платы как запчасти сюда не считаем: в апсейл попадают поломки по вине клиента и добровольные покупки, гарантийные случаи мы меняем бесплатно.
@@ -1051,25 +1063,39 @@ perEl.innerHTML = `<button class="per tot" role="tab" data-p="tot" aria-selected
   + M.map((m,i)=>`<button class="per" role="tab" data-p="${i}" aria-selected="false">${m}${
       i===LASTI?'<span class="dot" title="месяц ещё идёт"></span>':""}</button>`).join("");
 
-/* тематические вкладки живут внутри «Итого» */
-tabsEl.innerHTML=TABS.map(([id,label],i)=>
-  `<button class="tab" role="tab" id="t-${id}" aria-controls="p-${id}" aria-selected="${i===0}">${label}</button>`).join("");
-panelsEl.innerHTML=TABS.map(([id,label,render],i)=>
-  `<section role="tabpanel" id="p-${id}" aria-labelledby="t-${id}" ${i?"hidden":""}>${render()}</section>`).join("");
+/* Разделы живут и на «Итого», и внутри месяца — иначе, выбрав месяц, читатель
+   теряет всю навигацию и получает одну простыню. Внутри месяца «Рефлексия» не
+   показывается: это авторский разбор всего периода, а не конкретного месяца, —
+   зато добавляется сводка «Что изменилось». */
+const tabsFor = () => SELM===null ? TABS
+  : TABS.filter(([id])=>id!=="refl").concat([["chg","Что изменилось", ()=>monthPanel(SELM)]]);
+
+function paintTabs(){
+  const T = tabsFor();
+  tabsEl.innerHTML = T.map(([id,label],i)=>
+    `<button class="tab" role="tab" id="t-${id}" aria-controls="p-${id}" aria-selected="${i===0}">${label}</button>`).join("");
+  panelsEl.innerHTML = T.map(([id,label,render],i)=>
+    `<section role="tabpanel" id="p-${id}" aria-labelledby="t-${id}" ${i?"hidden":""}>${render()}</section>`).join("");
+}
+
 tabsEl.addEventListener("click",e=>{
   const b=e.target.closest(".tab"); if(!b) return;
-  TABS.forEach(([id])=>{
-    const t=document.getElementById("t-"+id), p=document.getElementById("p-"+id);
-    const on=t===b; t.setAttribute("aria-selected",on); p.hidden=!on;
+  [...tabsEl.querySelectorAll(".tab")].forEach(t=>{
+    const p=document.getElementById(t.getAttribute("aria-controls"));
+    const on=t===b; t.setAttribute("aria-selected",on); if(p) p.hidden=!on;
   });
 });
 
 function showPeriod(p){
   [...perEl.querySelectorAll(".per")].forEach(b=>b.setAttribute("aria-selected", b.dataset.p===String(p)));
   const total = p==="tot";
-  tabsEl.hidden = !total; panelsEl.hidden = !total; mEl.hidden = total;
-  renderRail(total ? CLOSEDI : Number(p));
-  if(!total) mEl.innerHTML = monthPanel(Number(p));
+  SELM = total ? null : Number(p);
+  // Авторские выводы написаны про период целиком, поэтому внутри месяца их прячем:
+  // под вкладкой «Авг» текст про июль читается как ошибка в данных.
+  document.body.setAttribute("data-mode", total ? "tot" : "month");
+  renderRail(total ? CLOSEDI : SELM);
+  paintTabs();
+  tabsEl.hidden = false; panelsEl.hidden = false; mEl.hidden = true;
   history.replaceState(null,"","#"+p);
 }
 perEl.addEventListener("click",e=>{
