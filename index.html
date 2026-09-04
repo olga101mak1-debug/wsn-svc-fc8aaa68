@@ -1036,6 +1036,32 @@ function moneyTake(){
   t+="Возвратов "+nf(one("returns"))+" — "+sh(one("returns"),base)+" обращений.";
   return t;
 }
+function returnsHead(){
+  const i=REFI();
+  if(SELM===null){
+    const tot=sumK("returns"), z=(D.returns||[]).slice(0,NCL()).filter(x=>x===0).length;
+    return "Возвраты оборудования: "+nf(tot)+" за период"+
+      (z?", и "+z+" "+plur(z,"месяц","месяца","месяцев")+" вовсе без возвратов":"");
+  }
+  const r=val("returns",i);
+  return cap1(MNOM(i).toLowerCase())+": "+(r?nf(r)+" "+plur(r,"возврат","возврата","возвратов"):"ни одного возврата");
+}
+function returnsTake(){
+  const i=REFI(), one = k => SELM===null ? sumK(k) : val(k,i);
+  const r=one("returns"), base=one("created");
+  const sh = base?Math.round(r/base*1000)/10:0;
+  let t="<b>"+cap1(per())+" вернули "+nf(r)+" "+plur(r,"единицу","единицы","единиц")+
+        " оборудования — "+pct1(sh)+" обращений.</b> ";
+  t+="Месяц возврата считается по дате отправки от клиента, источник — лист «Возвраты» таблицы клиентского опыта. ";
+  if(SELM===null){
+    const mi=maxIK("returns");
+    t+="Больше всего вернули в "+MPRE(mi)+" — "+nf(val("returns",mi))+". ";
+  }
+  t+="<br><br><b>Возврат и компенсация — разные вещи.</b> Компенсацией закрывают вопрос, "+
+     "оставляя оборудование клиенту; возврат означает, что станок поехал обратно. "+
+     "Смотреть их стоит вместе: месяц без возвратов, но с частыми выплатами — это не победа.";
+  return t;
+}
 function vocTake(){
   const i=REFI();
   return "<b>"+cap1(per())+" собрано "+nf(one("insights"))+" "+plur(one("insights"),"инсайт","инсайта","инсайтов")+
@@ -1182,6 +1208,14 @@ const TABS=[
     ${bars(D.compSum,{fmt:money,ref:24738,refLabel:"среднее 24 738 ₽",dir:"down"})}
     <div class="take good">${moneyTake()}</div>
   </div>
+
+  <div class="panel">
+    <h2>${returnsHead()}</h2>
+    <p class="cap">Возвратов оборудования в месяц · источник — лист «Возвраты»</p>
+    ${bars(D.returns,{dir:"down"})}
+    <div class="take">${returnsTake()}</div>
+  </div>
+
   <div class="grid2">
     <div class="panel">
       <h2>Сумму апсейла делает одна крупная сделка</h2>
